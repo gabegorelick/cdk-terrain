@@ -34,7 +34,7 @@ export interface RemoteProject extends LocalProject {
 export type Project = LocalProject | RemoteProject;
 
 export type InitArgs = {
-  cdktfVersion?: string;
+  cdktnVersion?: string;
   destination: string;
   dist?: string;
   providers?: string[];
@@ -88,7 +88,7 @@ for (const template of availableTemplates) {
 }
 
 export async function init({
-  cdktfVersion,
+  cdktnVersion,
   destination,
   dist,
   projectId,
@@ -107,7 +107,7 @@ export async function init({
       : undefined;
   const variant = builtInName ? TEMPLATE_VARIANTS[builtInName] : undefined;
 
-  const deps: any = await determineDeps(cdktfVersion, dist, builtInName);
+  const deps = await determineDeps(cdktnVersion, dist, builtInName);
 
   const futureFlags = Object.entries(FUTURE_FLAGS)
     .map(([key, value]) => `    "${key}": "${value}"`)
@@ -121,9 +121,9 @@ export async function init({
     ...projectInfo,
     futureFlags,
     projectId,
-    sendCrashReports,
-    sendUsageTelemetry,
-    silent,
+    sendCrashReports: String(!!sendCrashReports),
+    sendUsageTelemetry: String(!!sendUsageTelemetry),
+    silent: String(!!silent),
   };
 
   const mcpConfigPath = path.join(destination, ".mcp.json");
@@ -151,7 +151,7 @@ export async function init({
       providers: providers,
       language: cdktfConfig.language,
       projectDirectory: destination,
-      cdktfVersion,
+      cdktfVersion: cdktnVersion,
       forceLocal: providersForceLocal,
       dist,
     });
@@ -248,7 +248,7 @@ export async function determineDeps(
 
   if (version === "0.0.0") {
     throw Errors.Usage(
-      `cannot use version 0.0.0, use --cdktf-version, --dist or CDKTF_DIST to install from a "dist" directory`,
+      `cannot use version 0.0.0, use --cdktn-version, --dist or CDKTF_DIST to install from a "dist" directory`,
     );
   }
 
