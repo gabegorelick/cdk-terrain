@@ -3,10 +3,24 @@
 import yargs from "yargs";
 
 import { readPackageJson, requireHandlers } from "./helper/utilities";
-import { Errors } from "@cdktn/commons";
+import { Errors, logger } from "@cdktn/commons";
 import { BaseCommand } from "./helper/base-command";
 
 const pkg = readPackageJson();
+
+// yargs only renders `deprecated` in help, so the notice is printed here. The
+// canonical option carries no yargs default so that an explicit value can be
+// told apart from the fallback.
+function applyDeprecatedCdktfVersion(argv: Record<string, any>) {
+  if (argv["cdktf-version"] !== undefined) {
+    logger.warn(
+      "WARNING: --cdktf-version is deprecated and will be removed in a future release. Use --cdktn-version instead.",
+    );
+  }
+  const version = argv["cdktn-version"] ?? argv["cdktf-version"] ?? pkg.version;
+  argv["cdktn-version"] = version;
+  argv.cdktnVersion = version;
+}
 
 class Command extends BaseCommand {
   public readonly command = "init";
@@ -38,8 +52,15 @@ class Command extends BaseCommand {
       .option("cdktn-version", {
         type: "string",
         desc: "The cdktn version to use while creating a new project.",
-        default: pkg.version,
+        defaultDescription: pkg.version,
       })
+      .option("cdktf-version", {
+        type: "string",
+        desc: "Deprecated alias of --cdktn-version.",
+        deprecated:
+          "Use --cdktn-version instead; --cdktf-version will be removed in a future release.",
+      })
+      .middleware(applyDeprecatedCdktfVersion)
       .option("from-terraform-project", {
         type: "string",
         desc: "Use a terraform project as the basis, CDK constructs will be generated based on the .tf files in the path",
