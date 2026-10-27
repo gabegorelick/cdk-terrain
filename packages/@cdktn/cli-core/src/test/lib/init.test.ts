@@ -17,7 +17,7 @@ describe(".mcp.json on init", () => {
 
   const run = (templatePath: string, silent = false) =>
     init({
-      cdktfVersion: "1.0.0",
+      cdktnVersion: "1.0.0",
       destination,
       projectId: "test",
       projectInfo: { Name: "test", Description: "test" },
