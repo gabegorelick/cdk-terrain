@@ -9,6 +9,10 @@ jest.mock("../helper/version-check", () => ({
   displayVersionMessage: jest.fn().mockResolvedValue(undefined),
 }));
 
+jest.mock("../helper/terraform-check", () => ({
+  terraformCheck: jest.fn().mockResolvedValue(undefined),
+}));
+
 jest.mock("../helper/check-environment", () => ({
   ...jest.requireActual("../helper/check-environment"),
   checkEnvironment: jest.fn().mockResolvedValue(undefined),
@@ -23,9 +27,16 @@ jest.mock("../ui/synth", () => ({
   runSynth: (...args: unknown[]) => mockRunSynth(...args),
 }));
 
+const mockRunInit = jest.fn();
+jest.mock("../helper/init", () => ({
+  ...jest.requireActual("../helper/init"),
+  checkForEmptyDirectory: jest.fn(),
+  runInit: (...args: unknown[]) => mockRunInit(...args),
+}));
+
 jest.mock("ci-info", () => ({ isCI: false, name: null }));
 
-import { synth, watch } from "../handlers";
+import { init, synth, watch } from "../handlers";
 
 describe("usage guards that run after reporting is initialized", () => {
   let workdir: string;
@@ -68,5 +79,38 @@ describe("usage guards that run after reporting is initialized", () => {
     });
 
     expect(mockRunSynth).not.toHaveBeenCalled();
+  });
+});
+
+describe("init --from-terraform-project guard", () => {
+  beforeEach(() => mockRunInit.mockReset());
+
+  // yargs parses a bare `--from-terraform-project` to "".
+  it.each([
+    ["an empty value", () => ""],
+    ['"."', () => "."],
+    ["the current directory", () => process.cwd()],
+  ])("rejects %s with a Usage error", async (_label, value) => {
+    await expect(init({ fromTerraformProject: value() })).rejects.toMatchObject(
+      {
+        __type: "Usage",
+        message: expect.stringContaining(
+          "--from-terraform-project requires a path",
+        ),
+      },
+    );
+    expect(mockRunInit).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["another path", "../my-tf-codebase"],
+    ["no value", undefined],
+  ])("passes %s through to runInit", async (_label, value) => {
+    const reachedRunInit = new Error("reached runInit");
+    mockRunInit.mockRejectedValue(reachedRunInit);
+
+    await expect(init({ fromTerraformProject: value })).rejects.toBe(
+      reachedRunInit,
+    );
   });
 });
